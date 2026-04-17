@@ -196,10 +196,8 @@ router.post('/', authorize('sales', 'create'), [
         itemName = plan.name;
       }
 
-      const discountAmt = (unitPrice * item.quantity * (item.discount_percent || 0)) / 100;
-      const lineTotal = unitPrice * item.quantity - discountAmt;
-      const taxAmt = lineTotal * (item.tax_percent || 10) / 100;
-      const totalAmt = lineTotal + taxAmt;
+      // discount từ frontend là số tiền cố định, không phải percent
+      const lineTotal = unitPrice * item.quantity - (item.discount || 0);
       const profit = lineTotal - (costPrice * item.quantity);
 
       subtotal += lineTotal;
@@ -212,21 +210,21 @@ router.post('/', authorize('sales', 'create'), [
         quantity: item.quantity,
         unit_price: unitPrice,
         cost_price: costPrice,
-        discount_percent: item.discount_percent || 0,
-        discount_amount: discountAmt,
-        tax_percent: item.tax_percent || 10,
-        tax_amount: taxAmt,
-        total_amount: totalAmt,
+        discount_percent: 0,
+        discount_amount: item.discount || 0,
+        tax_percent: 0, // Không tính tax ở từng line, chỉ tính ở cấp đơn
+        tax_amount: 0,
+        total_amount: lineTotal,
         profit: profit,
         serial_numbers: item.serial_numbers,
         notes: item.notes,
       });
     }
 
-    const discountAmount = subtotal * discount_percent / 100;
-    const taxAmount = (subtotal - discountAmount) * 0.1; // VAT 10%
-    const grandTotal = subtotal - discountAmount + taxAmount;
-    const profit = subtotal - discountAmount - costTotal;
+    // Tính tax ở cấp đơn (VAT 10%)
+    const taxAmount = subtotal * 0.1;
+    const grandTotal = subtotal + taxAmount;
+    const profit = subtotal - costTotal;
 
     // Tạo đơn hàng
     const [order] = await trx('sales_orders').insert({

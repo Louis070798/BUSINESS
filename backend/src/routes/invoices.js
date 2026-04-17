@@ -191,10 +191,8 @@ router.put('/:id', authorize('invoices', 'create'), async (req, res) => {
       let subtotal = 0;
       for (const item of items) {
         const lineTotal = (item.unit_price || 0) * (item.quantity || 0);
-        const discountAmt = lineTotal * (item.discount_percent || 0) / 100;
+        const discountAmt = item.discount_amount || 0; // Use provided discount amount
         const afterDiscount = lineTotal - discountAmt;
-        const taxAmt = afterDiscount * (item.tax_percent || 10) / 100;
-        const totalAmt = afterDiscount + taxAmt;
         subtotal += afterDiscount;
 
         await trx('invoice_items').insert({
@@ -206,11 +204,11 @@ router.put('/:id', authorize('invoices', 'create'), async (req, res) => {
           unit: item.unit,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          discount_percent: item.discount_percent || 0,
+          discount_percent: 0, // No percent calculation
           discount_amount: discountAmt,
-          tax_percent: item.tax_percent || 10,
-          tax_amount: taxAmt,
-          total_amount: totalAmt,
+          tax_percent: 0, // No percent at line level
+          tax_amount: 0,
+          total_amount: afterDiscount,
         });
       }
 
